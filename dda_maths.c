@@ -164,6 +164,36 @@ inline uint16_t int_sqrt(uint32_t a) {
 	return x;
 }
 
+/*!
+				integer inverse square root algorithm
+				\param a find the inverse of the square root of this number
+				\return 0x1000 / sqrt(a) - 1 < returnvalue <= 1x1000 / sqrt(a)
+
+				This is a binary search but it uses only the minimum required bits for each step.
+*/
+inline uint16_t int_inv_sqrt(uint16_t a) {
+				/// 16bits inverse (much faster than doing a full 32bits inverse)
+				/// the 0xFFFFU instead of 0x10000UL hack allows using 16bits and 8bits variable for the first 8 steps without overflowing
+				/// and it seems to give better results for the ramping equation too :)
+				uint32_t q = (0xFFFFU / a) << 8;
+				uint8_t z = 0;
+				const uint16_t q16 = q >> 8;
+				for(uint8_t i = 0x80 ; i ; i >>= 1) {
+								z |= i;
+								const uint16_t y = (uint16_t)z * z;
+								if (y > q16)
+												z ^= i;
+				}
+				uint16_t x = z << 4;
+				for(uint16_t i = 0x8 ; i ; i >>= 1) {
+								x |= i;
+								const uint32_t y = (uint32_t)x * x;
+								if (y > q)
+												x ^= i;
+				}
+				return x;
+}
+
 // this is an ultra-crude pseudo-logarithm routine, such that:
 // 2 ^ msbloc(v) >= v
 /*! crude logarithm algorithm
