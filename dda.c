@@ -428,9 +428,12 @@ void dda_start(DDA *dda) {
 			move_state.step_no = 0;
 		#endif
 		#ifdef LOOKAHEAD
-				// Set start speed (a recalculation of move_state.c will be triggered at first step)
-				move_state.c = 0;
+				// Set start speed (a recalculation of move_state.c is needed to ensure continuity)
 				move_state.n = dda->F_start_in_steps;
+				if (move_state.n == 0)
+					move_state.c = C0;
+				else
+					move_state.c = ((C0 >> 8) * int_inv_sqrt(move_state.n)) >> 5;
 		#else
 				move_state.c = C0;
 				move_state.n = 0;
