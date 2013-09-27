@@ -68,8 +68,8 @@ void io_init(void) {
 	// setup I/O pins
 
 	// X Stepper
-	//WRITE(X_STEP_PIN, 0);	SET_OUTPUT(X_STEP_PIN);
-	//WRITE(X_DIR_PIN,  0);	SET_OUTPUT(X_DIR_PIN);
+	WRITE(X_STEP_PIN, 0);	SET_OUTPUT(X_STEP_PIN);
+	WRITE(X_DIR_PIN,  0);	SET_OUTPUT(X_DIR_PIN);
 	#ifdef X_MIN_PIN
 		SET_INPUT(X_MIN_PIN);
 		WRITE(X_MIN_PIN, 0); // pullup resistors off
@@ -80,8 +80,8 @@ void io_init(void) {
 	#endif
 
 	// Y Stepper
-	//WRITE(Y_STEP_PIN, 0);	SET_OUTPUT(Y_STEP_PIN);
-	//WRITE(Y_DIR_PIN,  0);	SET_OUTPUT(Y_DIR_PIN);
+	WRITE(Y_STEP_PIN, 0);	SET_OUTPUT(Y_STEP_PIN);
+	WRITE(Y_DIR_PIN,  0);	SET_OUTPUT(Y_DIR_PIN);
 	#ifdef Y_MIN_PIN
 		SET_INPUT(Y_MIN_PIN);
 		WRITE(Y_MIN_PIN, 0); // pullup resistors off

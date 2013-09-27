@@ -492,14 +492,14 @@ void dda_step(DDA *dda) {
 	if ((move_state.x_steps) && ! endstop_stop) {
 		move_state.x_counter -= dda->x_delta;
 		if (move_state.x_counter < 0) {
-			//x_step();
+			x_step();
 			move_state.x_steps--;
 			move_state.x_counter += dda->total_steps;
 		}
 	}
 #else	// ACCELERATION_TEMPORAL
 	if ((dda->axis_to_step == 'x') && ! endstop_stop) {
-		//x_step();
+		x_step();
 		move_state.x_steps--;
 		move_state.x_time += dda->x_step_interval;
 		move_state.all_time = move_state.x_time;
