@@ -4,7 +4,7 @@
 
 	why double up on these macros? see http://gcc.gnu.org/onlinedocs/cpp/Stringification.html
 */
-#define __AVR_ATmega2560__
+
 #ifndef	_ARDUINO_H
 #define	_ARDUINO_H
 
@@ -67,11 +67,32 @@
 	added as necessary or if I feel like it- not a comprehensive list!
 */
 
+#if defined (__AVR_ATmega168__) || defined (__AVR_ATmega328__) || \
+    defined (__AVR_ATmega328P__)
+	#include	"arduino_168_328p.h"
+#endif
+
+#if defined (__AVR_ATmega644__) || defined (__AVR_ATmega644P__) || \
+    defined (__AVR_ATmega644PA__) || defined (__AVR_ATmega1284__) || \
+    defined (__AVR_ATmega1284P__)
+	#include	"arduino_644.h"
+#endif
 
 #if defined (__AVR_ATmega1280__) || defined (__AVR_ATmega2560__)
 	#include	"arduino_1280.h"
 #endif
 
+#if defined (__AVR_AT90USB1286__)
+  #include "arduino_usb1286.h"
+#endif
+
+#if defined (__AVR_AT90USB1287__)
+  #include "arduino_usb1287.h"
+#endif
+
+#if defined (__AVR_ATmega32U4__)
+	#include    "arduino_32U4.h"
+#endif
 
 #ifndef	DIO0_PIN
 #error pins for this chip not defined in arduino.h! If you write an appropriate pin definition and have this firmware work on your chip, please tell us via the forum thread

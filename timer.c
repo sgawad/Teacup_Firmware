@@ -47,12 +47,12 @@ volatile uint8_t	clock_flag_250ms = 0;
 volatile uint8_t	clock_flag_1s = 0;
 
 /// comparator B is the system clock, happens every TICK_TIME
-ISR(TIMER1_COMPB_vect) {
+ISR(TIMER4_COMPB_vect) {
 	// save status register
 	uint8_t sreg_save = SREG;
 
 	// set output compare register to the next clock tick
-	OCR1B = (OCR1B + TICK_TIME) & 0xFFFF;
+	OCR4B = (OCR4B + TICK_TIME) & 0xFFFF;
 
 	/*
 	clock stuff
@@ -83,7 +83,7 @@ ISR(TIMER1_COMPB_vect) {
 #ifdef	MOTHERBOARD
 
 /// comparator A is the step timer. It has higher priority then B.
-ISR(TIMER1_COMPA_vect) {
+ISR(TIMER4_COMPA_vect) {
 	// save status register
 	uint8_t sreg_save = SREG;
 
@@ -95,7 +95,7 @@ ISR(TIMER1_COMPA_vect) {
 		#endif
 
 		// disable this interrupt. if we set a new timeout, it will be re-enabled when appropriate
-		TIMSK1 &= ~MASK(OCIE1A);
+		TIMSK4 &= ~MASK(OCIE4A);
 		
 		// stepper tick
 		queue_step();
@@ -112,12 +112,12 @@ ISR(TIMER1_COMPA_vect) {
 
 	// similar algorithm as described in setTimer below.
 	if (next_step_time < 65536) {
-		OCR1A = (OCR1A + next_step_time) & 0xFFFF;
+		OCR4A = (OCR4A + next_step_time) & 0xFFFF;
 	} else if(next_step_time < 75536){
-		OCR1A = (OCR1A - 10000) & 0xFFFF;
+		OCR4A = (OCR4A - 10000) & 0xFFFF;
 		next_step_time += 10000;
 	}
-	// leave OCR1A as it was
+	// leave OCR4A as it was
 
 	// restore status register
 	MEMORY_BARRIER();
@@ -130,13 +130,13 @@ ISR(TIMER1_COMPA_vect) {
 void timer_init()
 {
 	// no outputs
-	TCCR1A = 0;
+	TCCR4A = 0;
 	// Normal Mode
-	TCCR1B = MASK(CS10);
+	TCCR4B = MASK(CS40);
 	// set up "clock" comparator for first tick
-	OCR1B = TICK_TIME & 0xFFFF;
+	OCR4B = TICK_TIME & 0xFFFF;
 	// enable interrupt
-	TIMSK1 = MASK(OCIE1B);
+	TIMSK4 = MASK(OCIE4B);
 }
 
 #ifdef	MOTHERBOARD
@@ -157,7 +157,7 @@ void setTimer(uint32_t delay)
 	#endif /* ACCELERATION_TEMPORAL */
 
 	// re-enable clock interrupt in case we're recovering from emergency stop
-	TIMSK1 |= MASK(OCIE1B);
+	TIMSK1 |= MASK(OCIE4B);
 
 	// An interrupt would make all our timing calculations invalid,
 	// so stop that here.
@@ -168,16 +168,16 @@ void setTimer(uint32_t delay)
 	// from one step to the next one, which should be more or less the same
 	// as from one step interrupt to the next one. The last step interrupt happend
 	// at OCR1A, so start delay from there.
-	step_start = OCR1A;
+	step_start = OCR4A;
 	if (next_step_time == 0) {
 		// new move, take current time as start value
-		step_start = TCNT1;
+		step_start = TCNT4;
 	}
 	next_step_time = delay;
 
 	#ifdef ACCELERATION_TEMPORAL
 	// 300 = safe number of cpu cycles until the interrupt actually happens
-	current_time = TCNT1;
+	current_time = TCNT4;
 	earliest_time = (uint32_t)current_time + 300;
 	if (current_time < step_start) // timer counter did overflow recently
 		earliest_time += 0x00010000;
@@ -205,29 +205,29 @@ void setTimer(uint32_t delay)
 	// Now we know how long we actually want to delay, so set the timer.
 	if (next_step_time < 65536) {
 		// set the comparator directly to the next real step
-		OCR1A = (next_step_time + step_start) & 0xFFFF;
+		OCR4A = (next_step_time + step_start) & 0xFFFF;
 	}
 	else if (next_step_time < 75536) {
 		// Next comparator interrupt would have to trigger another
 		// interrupt within a short time (possibly within 1 cycle).
 		// Avoid the impossible by firing the interrupt earlier.
-		OCR1A = (step_start - 10000) & 0xFFFF;
+		OCR4A = (step_start - 10000) & 0xFFFF;
 		next_step_time += 10000;
 	}
 	else {
-		OCR1A = step_start;
+		OCR4A = step_start;
 	}
 
 	// Enable this interrupt, but only do it after disabling
 	// global interrupts (see above). This will cause push any possible
 	// timer1a interrupt to the far side of the return, protecting the 
 	// stack from recursively clobbering memory.
-	TIMSK1 |= MASK(OCIE1A);
+	TIMSK4 |= MASK(OCIE4A);
 }
 
 /// stop timers - emergency stop
 void timer_stop() {
 	// disable all interrupts
-	TIMSK1 = 0;
+	TIMSK4 = 0;
 }
 #endif /* ifdef MOTHERBOARD */

@@ -114,8 +114,7 @@ void heater_init() {
 	TIMSK0 = 0;
 	OCR0A = 0;
 	OCR0B = 0;
-
-	// timer 1 is used for stepping
+	
 
 	TCCR2A = MASK(WGM21) | MASK(WGM20);
 	// PWM frequencies in TCCR2B, see page 156 of the ATmega644 reference.
@@ -127,14 +126,9 @@ void heater_init() {
 	OCR2A = 0;
 	OCR2B = 0;
 
-	#ifdef	TCCR3A
-		TCCR3A = MASK(WGM30);
-		TCCR3B = MASK(WGM32) | MASK(CS30);
-		TIMSK3 = 0;
-		OCR3A = 0;
-		OCR3B = 0;
-	#endif
-
+	
+	//With DC motors this is used for the stepper
+   #ifndef DCXYMOT
 	#ifdef	TCCR4A
 		#ifdef TIMER4_IS_10_BIT
 			// ATmega16/32U4 fourth timer is a special 10 bit timer
@@ -158,6 +152,7 @@ void heater_init() {
 		#ifdef OCR4D  
 			OCR4D = 0;
 		#endif
+	#endif
 	#endif
 
 	#ifdef	TCCR5A
@@ -186,19 +181,6 @@ void heater_init() {
 				case (uint16_t) &OCR2B:
 					TCCR2A |= MASK(COM2B1);
 					break;
-				#ifdef TCCR3A
-				case (uint16_t) &OCR3AL:
-					TCCR3A |= MASK(COM3A1);
-					break;
-				case (uint16_t) &OCR3BL:
-					TCCR3A |= MASK(COM3B1);
-					break;
-				#ifdef COM3C1
-				case (uint16_t) &OCR3CL:
-					TCCR3A |= MASK(COM3C1);
-					break;
-				#endif
-				#endif
 				#ifdef	TCCR4A
 					#if defined (OCR4AL)
 					case (uint16_t) &OCR4AL:

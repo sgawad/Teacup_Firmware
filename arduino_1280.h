@@ -105,13 +105,13 @@ pins
 #define	DIO11_RPORT	PINB
 #define	DIO11_WPORT	PORTB
 #define	DIO11_DDR		DDRB
-#define DIO11_PWM		NULL
+#define DIO11_PWM		&OCR1A
 
 #define	DIO12_PIN		PINB6
 #define	DIO12_RPORT	PINB
 #define	DIO12_WPORT	PORTB
 #define	DIO12_DDR		DDRB
-#define DIO12_PWM		NULL
+#define DIO12_PWM		&OCR1B
 
 #define	DIO13_PIN		PINB7
 #define	DIO13_RPORT	PINB

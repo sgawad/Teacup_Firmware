@@ -33,7 +33,7 @@
 
 BUILDDIR = build
 DEPEND = $(BUILDDIR)/depend
-
+define __AVR_ATmega2560__
 CFLAGS += -save-temps=obj
 
 OBJ = $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES))

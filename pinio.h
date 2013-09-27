@@ -50,7 +50,16 @@ X Stepper
 #else
 	#define	x_max()							(0)
 #endif
-
+#ifdef	c_XEncoderPinB
+#define x_EncB()						(READ(c_XEncoderPinB)?1:0)
+#else
+#define	x_EncB()							(0)
+#endif
+#ifdef	c_XEncoderPinI
+#define x_EncI()						(READ(c_XEncoderPinI)?1:0)
+#else
+#define	x_EncI()							(0)
+#endif
 /*
 Y Stepper
 */
@@ -80,7 +89,16 @@ Y Stepper
 #else
 	#define	y_max()							(0)
 #endif
-
+#ifdef	c_YEncoderPinB
+#define y_EncB()						(READ(c_YEncoderPinB)?1:0)
+#else
+#define	y_EncB()							(0)
+#endif
+#ifdef	c_YEncoderPinI
+#define y_EncI()						(READ(c_YEncoderPinI)?1:0)
+#else
+#define	y_EncI()							(0)
+#endif
 /*
 Z Stepper
 */
@@ -140,8 +158,8 @@ End Step - All Steppers
 (so we don't have to delay in interrupt context)
 */
 
-#define unstep() 							do { _x_step(0); _y_step(0); _z_step(0); _e_step(0); } while (0)
-
+//#define unstep() 							do { _x_step(0); _y_step(0); _z_step(0); _e_step(0); } while (0)
+#define unstep() 							do {_z_step(0); _e_step(0); } while (0)
 /*
 Stepper Enable Pins
 */

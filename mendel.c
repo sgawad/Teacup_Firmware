@@ -239,5 +239,5 @@ int main (void)
 		}
 
 		clock();
-	}
+		}
 }

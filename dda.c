@@ -20,12 +20,16 @@
 #include	"sersendf.h"
 #include	"pinio.h"
 #include	"config.h"
+#include <stdbool.h>
 //#include "graycode.c"
 
 #ifdef	DC_EXTRUDER
 	#include	"heater.h"
 #endif
 
+#ifndef DCXYMOT
+	#define DCXYMOT
+#endif
 /*
 	position tracking
 */
@@ -47,6 +51,20 @@ TARGET current_position __attribute__ ((__section__ (".bss")));
 /// \brief numbers for tracking the current state of movement
 MOVE_STATE move_state __attribute__ ((__section__ (".bss")));
 
+// X encoder Pin + Int + Var def
+volatile bool _XEncoderBSet;
+volatile bool _XEncoderISet;
+volatile long _XEncoderTicks = 0;
+volatile long _XEncoderIndex = 0;
+// Y encoder Pin + Int + Var def
+volatile bool _YEncoderBSet;
+volatile bool _YEncoderISet;
+volatile long _YEncoderTicks = 0;
+volatile long _YEncoderIndex = 0;
+
+
+
+
 /*! Inititalise DDA movement structures
 */
 void dda_init(void) {
@@ -58,6 +76,36 @@ void dda_init(void) {
 		move_state.n = 1;
 		move_state.c = ((uint32_t)((double)F_CPU / sqrt((double)(STEPS_PER_M_X * ACCELERATION / 1000.)))) << 8;
 	#endif
+	
+		// timer 1 is used for DCXYmotor
+		#ifdef DCXYMOT
+		// setup PWM timers: fast PWM
+		// Warning 2012-01-11: these are not consistent across all AVRs
+		TCCR1A = MASK(WGM11) | MASK(WGM10);
+		// PWM frequencies in TCCR0B, see page 108 of the ATmega644 reference.
+		TCCR1B = MASK(CS10); // F_CPU / 256 (about 78(62.5) kHz on a 20(16) MHz chip)
+		//TCCR0B = MASK(CS10) | MASK(CS12); // F_CPU / 256 / 1024  (about 76(61) Hz)
+		TIMSK1 = 0;
+		OCR1A = 0;
+		OCR1B = 0;
+		OCR1C = 0;
+		TCCR1A |= MASK(COM1A1);
+		//TCCR3A = MASK(WGM30);
+		TCCR3A = MASK(WGM31) | MASK(WGM30);
+		//TCCR3B = MASK(WGM32) | MASK(CS30);
+		TCCR3B = MASK(CS30);
+		TIMSK3 = 0;
+		OCR3A = 0;
+		OCR3B = 0;
+		OCR3C = 0;
+		TCCR3A |= MASK(COM3A1);
+		SET_OUTPUT(PE5);
+		SET_OUTPUT(PB5);
+		SET_OUTPUT(PB6);
+		SET_OUTPUT(PB7);
+		WRITE(PB6,1);
+		WRITE(PB7,1);
+		#endif
 }
 
 /*! Distribute a new startpoint to DDA's internal structures without any movement.
@@ -79,7 +127,7 @@ void dda_new_startpoint(void) {
 
 	This function does a /lot/ of math. It works out directions for each axis, distance travelled, the time between the first and second step
 
-	It also pre-fills any data that the selected accleration algorithm needs, and can be pre-computed for the whole move.
+	It also pre-fills any data that the selected acceleration algorithm needs, and can be pre-computed for the whole move.
 
 	This algorithm is probably the main limiting factor to print speed in terms of firmware limitations
 */
@@ -493,6 +541,7 @@ void dda_step(DDA *dda) {
 		move_state.x_counter -= dda->x_delta;
 		if (move_state.x_counter < 0) {
 			//x_step();
+			OCR1A=70;
 			move_state.x_steps--;
 			move_state.x_counter += dda->total_steps;
 		}
@@ -500,6 +549,7 @@ void dda_step(DDA *dda) {
 #else	// ACCELERATION_TEMPORAL
 	if ((dda->axis_to_step == 'x') && ! endstop_stop) {
 		//x_step();
+		OCR1A=70;
 		move_state.x_steps--;
 		move_state.x_time += dda->x_step_interval;
 		move_state.all_time = move_state.x_time;
@@ -534,14 +584,14 @@ void dda_step(DDA *dda) {
 	if ((move_state.y_steps) && ! endstop_stop) {
 		move_state.y_counter -= dda->y_delta;
 		if (move_state.y_counter < 0) {
-			y_step();
+			//y_step();
 			move_state.y_steps--;
 			move_state.y_counter += dda->total_steps;
 		}
 	}
 #else	// ACCELERATION_TEMPORAL
 	if ((dda->axis_to_step == 'y') && ! endstop_stop) {
-		y_step();
+		//y_step();
 		move_state.y_steps--;
 		move_state.y_time += dda->y_step_interval;
 		move_state.all_time = move_state.y_time;
@@ -771,6 +821,7 @@ void dda_step(DDA *dda) {
 	// if not, too bad. or insert a (very!) small delay here, or fire up a spare timer or something.
 	// we also hope that we don't step before the drivers register the low- limit maximum speed if you think this is a problem.
 	unstep();
+	OCR1A=0;
 }
 
 /// update global current_position struct
@@ -822,4 +873,36 @@ void update_current_position() {
 
 		// current_position.F is updated in dda_start()
 	}
+}
+
+ISR(INT2_vect) 
+{
+	// Test transition; since the interrupt will only fire on 'rising' we don't need to read pin A
+	//_XCsens=analogRead(A0);
+	_XEncoderBSet = x_EncB();   // read the input pin 
+	_XEncoderISet = x_EncI();
+	// and adjust counter + if A leads B
+	#ifdef LeftEncoderIsReversed
+	_XEncoderTicks -= _XEncoderBSet ? -1 : +1;
+	if (_XEncoderISet == 0)
+	_XEncoderIndex -= _XEncoderBSet ? -1 : +1;
+	#else
+	_XEncoderTicks += _XEncoderBSet ? -1 : +1;
+	#endif
+}
+
+// Interrupt service routines for the right motor's quadrature encoder
+ISR(INT3_vect) 
+{
+	// Test transition; since the interrupt will only fire on 'rising' we don't need to read pin A
+	_YEncoderBSet = y_EncB();    // read the input pin
+	_YEncoderISet = y_EncI();
+	// and adjust counter + if A leads B
+	#ifdef RightEncoderIsReversed
+	_YEncoderTicks -= _YEncoderBSet ? -1 : +1;
+	if (_YEncoderISet == 0)
+	_YEncoderIndex -= _YEncoderBSet ? -1 : +1;
+	#else
+	_YEncoderTicks += _YEncoderBSet ? -1 : +1;
+	#endif
 }
