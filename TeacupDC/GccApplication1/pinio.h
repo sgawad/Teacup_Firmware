@@ -5,7 +5,20 @@
 #ifndef	_PINIO_H
 #define	_PINIO_H
 
+#ifndef	c_XEncoderPinB
+#define	c_XEncoderPinB
+#endif
+#ifndef	c_XEncoderPinI
+#define	c_XEncoderPinI
+#endif
+#ifndef	c_YEncoderPinB
+#define	c_YEncoderPinB
+#endif
+#ifndef	c_YEncoderPinI
+#define	c_YEncoderPinI
+#endif
 #include	"config.h"
+
 
 /*
 Power
@@ -51,12 +64,12 @@ X Stepper
 	#define	x_max()							(0)
 #endif
 #ifdef	c_XEncoderPinB
-#define x_EncB()						(READ(c_XEncoderPinB)?1:0)
+#define x_EncB()						(READ(PL4)?1:0)
 #else
 #define	x_EncB()							(0)
 #endif
 #ifdef	c_XEncoderPinI
-#define x_EncI()						(READ(c_XEncoderPinI)?1:0)
+#define x_EncI()						(READ(PL2)?1:0)
 #else
 #define	x_EncI()							(0)
 #endif
@@ -90,12 +103,12 @@ Y Stepper
 	#define	y_max()							(0)
 #endif
 #ifdef	c_YEncoderPinB
-#define y_EncB()						(READ(c_YEncoderPinB)?1:0)
+#define y_EncB()						(READ(PG0)?1:0)
 #else
 #define	y_EncB()							(0)
 #endif
 #ifdef	c_YEncoderPinI
-#define y_EncI()						(READ(c_YEncoderPinI)?1:0)
+#define y_EncI()						(READ(PL6)?1:0)
 #else
 #define	y_EncI()							(0)
 #endif

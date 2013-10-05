@@ -157,7 +157,7 @@ void setTimer(uint32_t delay)
 	#endif /* ACCELERATION_TEMPORAL */
 
 	// re-enable clock interrupt in case we're recovering from emergency stop
-	TIMSK1 |= MASK(OCIE4B);
+	TIMSK4 |= MASK(OCIE4B);
 
 	// An interrupt would make all our timing calculations invalid,
 	// so stop that here.

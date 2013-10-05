@@ -6,6 +6,8 @@
 
 #include	<string.h>
 #include	<stdlib.h>
+#include	<avr/io.h>
+#include	<stdint.h>
 #include	<math.h>
 #include	<avr/interrupt.h>
 
@@ -81,30 +83,65 @@ void dda_init(void) {
 		#ifdef DCXYMOT
 		// setup PWM timers: fast PWM
 		// Warning 2012-01-11: these are not consistent across all AVRs
-		TCCR1A = MASK(WGM11) | MASK(WGM10);
-		// PWM frequencies in TCCR0B, see page 108 of the ATmega644 reference.
-		TCCR1B = MASK(CS10); // F_CPU / 256 (about 78(62.5) kHz on a 20(16) MHz chip)
-		//TCCR0B = MASK(CS10) | MASK(CS12); // F_CPU / 256 / 1024  (about 76(61) Hz)
-		TIMSK1 = 0;
-		OCR1A = 0;
-		OCR1B = 0;
-		OCR1C = 0;
-		TCCR1A |= MASK(COM1A1);
-		//TCCR3A = MASK(WGM30);
-		TCCR3A = MASK(WGM31) | MASK(WGM30);
-		//TCCR3B = MASK(WGM32) | MASK(CS30);
-		TCCR3B = MASK(CS30);
-		TIMSK3 = 0;
-		OCR3A = 0;
-		OCR3B = 0;
-		OCR3C = 0;
-		TCCR3A |= MASK(COM3A1);
+				TCCR1A = MASK(WGM10);
+				// PWM frequencies in TCCR0B, see page 108 of the ATmega644 reference.
+				TCCR1B = MASK(CS10); // F_CPU / 256 (about 78(62.5) kHz on a 20(16) MHz chip)
+				//TCCR0B = MASK(CS10) | MASK(CS12); // F_CPU / 256 / 1024  (about 76(61) Hz)
+				TIMSK1 = 0;
+				OCR1A = 0;
+				OCR1B = 0;
+				OCR1C = 0;
+				TCCR1A |= MASK(COM1A1);
+				//TCCR3A = MASK(WGM30);
+				TCCR3A = MASK(WGM30);
+				TCCR3B = MASK(CS30);
+				TIMSK3 = 0;
+				OCR3A = 0;
+				OCR3B = 0;
+				OCR3C = 0;
+				TCCR3A |= MASK(COM3C1);
+		
 		SET_OUTPUT(PE5);
 		SET_OUTPUT(PB5);
 		SET_OUTPUT(PB6);
 		SET_OUTPUT(PB7);
 		WRITE(PB6,1);
 		WRITE(PB7,1);
+		WRITE(PB6,0);
+		WRITE(PB7,0);
+		//Channel A ENCODER
+		DDRD &= ~(1 << DDD2);     // Clear the PD2 pin
+		 // PD2 (PCINT2 pin) is now an input
+		PORTD |= (1 << 2);    // turn On the Pull-up
+		// PD2 is now an input with pull-up enabled
+		DDRD &= ~(1 << DDD3);     // Clear the PD2 pin
+		// PD2 (PCINT3 pin) is now an input
+		PORTD |= (1 << 3);    // turn On the Pull-up
+		// PD2 is now an input with pull-up enabled
+		EICRA |= (1 << ISC20 | 1 << ISC21);    // set INT2 to trigger on rising logic change
+		EICRA |= (1 << ISC30 | 1 << ISC31);    // set INT3 to trigger on rising logic change
+        EIMSK |= (1 << INT2);     // Turns on INT2
+		EIMSK |= (1 << INT3);     // Turns on INT3
+		
+		// X ENCODER
+		DDRL &= ~(1 << DDL4);   // Clear the PL4 pin   Channel B  X
+								// PL4  is now an input
+		PORTL |= (1 << 4);		// turn On the Pull-up
+								// PL4 (X channel B) pin 45 is now an input with pull-up enabled
+		DDRL &= ~(1 << DDL2);   // Clear the PL2 pin
+								// PL2 is now an input
+		PORTL |= (1 << 2);		// turn On the Pull-up
+								// PL2 (X channel I) pin 47  is now an input with pull-up enabled
+		
+		//Y ENCODER
+		DDRG &= ~(1 << DDG0);	// Clear the PG0 pin
+								// PG0 (Y channel B) pin 41  is now an input
+		PORTG |= (1 << 0);		// turn On the Pull-up
+								// PD2 is now an input with pull-up enabled
+		DDRL &= ~(1 << DDL6);	// Clear the PG2 pin
+								// PD2 (Y channel I) pin 43 is now an input
+		PORTL |= (1 << 6);		// turn On the Pull-up
+								// PD2 is now an input with pull-up enabled
 		#endif
 }
 
@@ -177,6 +214,7 @@ void dda_create(DDA *dda, TARGET *target, DDA *prev_dda) {
 	dda->x_direction = (target->X >= startpoint.X)?1:0;
 	dda->y_direction = (target->Y >= startpoint.Y)?1:0;
 	dda->z_direction = (target->Z >= startpoint.Z)?1:0;
+
 
 	if (target->e_relative) {
 		e_delta_um = labs(target->E);
@@ -541,7 +579,10 @@ void dda_step(DDA *dda) {
 		move_state.x_counter -= dda->x_delta;
 		if (move_state.x_counter < 0) {
 			//x_step();
-			OCR1A=70;
+			x_direction(dda->x_direction);
+			y_direction(dda->y_direction);
+			OCR1A=255;
+			OCR3C=255;
 			move_state.x_steps--;
 			move_state.x_counter += dda->total_steps;
 		}
@@ -549,7 +590,10 @@ void dda_step(DDA *dda) {
 #else	// ACCELERATION_TEMPORAL
 	if ((dda->axis_to_step == 'x') && ! endstop_stop) {
 		//x_step();
-		OCR1A=70;
+		x_direction(dda->x_direction);
+		y_direction(dda->y_direction);
+		OCR1A=255;
+		OCR3C=255;
 		move_state.x_steps--;
 		move_state.x_time += dda->x_step_interval;
 		move_state.all_time = move_state.x_time;
@@ -822,6 +866,7 @@ void dda_step(DDA *dda) {
 	// we also hope that we don't step before the drivers register the low- limit maximum speed if you think this is a problem.
 	unstep();
 	OCR1A=0;
+	OCR3C=0;
 }
 
 /// update global current_position struct
@@ -830,7 +875,9 @@ void update_current_position() {
 
 	if (queue_empty()) {
 		current_position.X = startpoint.X;
+		current_position.X = _XEncoderTicks;
 		current_position.Y = startpoint.Y;
+		current_position.Y = _YEncoderTicks;
 		current_position.Z = startpoint.Z;
 		current_position.E = startpoint.E;
 	}
@@ -840,10 +887,11 @@ void update_current_position() {
 			current_position.X = dda->endpoint.X -
 			                     // should be: move_state.x_steps * 1000000 / STEPS_PER_M_X)
 			                     // but x_steps can be like 1000000 already, so we'd overflow
-			                     move_state.x_steps * 1000 / ((STEPS_PER_M_X + 500) / 1000);
+			                     move_state.x_steps * 1000 / ((STEPS_PER_M_X + 500) / 1000);					 
 		else
 			current_position.X = dda->endpoint.X +
 			                     move_state.x_steps * 1000 / ((STEPS_PER_M_X + 500) / 1000);
+			current_position.X = _XEncoderTicks;
 
 		if (dda->y_direction)
 			current_position.Y = dda->endpoint.Y -
@@ -851,6 +899,7 @@ void update_current_position() {
 		else
 			current_position.Y = dda->endpoint.Y +
 			                     move_state.y_steps * 1000 / ((STEPS_PER_M_Y + 500) / 1000);
+			current_position.Y = _YEncoderTicks;
 
 		if (dda->z_direction)
 			current_position.Z = dda->endpoint.Z -
